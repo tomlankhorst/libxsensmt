@@ -1,57 +1,45 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.10)
 
-include(ReMake)
+set(VER 4.2)
 
-remake_project(
-  libxsensmt
-  VERSION 4.2
-  RELEASE beta
-  SUMMARY "Software development kit for Xsens motion tracking (MT) devices."
-  AUTHOR "Xsens Technologies BV"
-  CONTACT "info@xsens.com"
-  HOME "https://www.xsens.com/mt-software-suite"
-  LICENSE "MT SDK Software License Agreement"
-  PREFIX xsensmt-
-  INSTALL /usr
-)
+project(libxsensmt VERSION ${VER})
 
-remake_doc(
-  html
-  vendor
+include(GNUInstallDirs)
+
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME} INTERFACE
+        INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lib>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        VERSION ${VER}
+        COMPATIBILITY AnyNewerVersion
 )
 
-remake_add_directories(lib)
+install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}Targets
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION include
+        )
 
-remake_pack_deb(
-  DEPENDS liblapack3g?f?
-)
-remake_pack_deb(
-  COMPONENT examples
-  DESCRIPTION "examples"
-  DEPENDS libxsensmt
-)
-remake_pack_deb(
-  COMPONENT dev
-  DESCRIPTION "development headers"
-  DEPENDS libxsensmt
-)
-remake_pack_deb(
-  ARCH all
-  COMPONENT doc
-  DESCRIPTION "documentation"
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+        "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+        INSTALL_DESTINATION lib/cmake/${PROJECT_NAME}
 )
 
-remake_distribute_deb(
-  DISTRIBUTION precise
-  SECTION libs
-  UPLOAD ppa:kralf/asl
-  DEPENDS remake doxygen pkg-config liblapack-dev
-  PASS CMAKE_BUILD_TYPE LIBXSENSMT_GIT_REVISION
-)
-remake_distribute_deb(
-  DISTRIBUTION trusty
-  SECTION libs
-  UPLOAD ppa:kralf/asl
-  DEPENDS remake doxygen pkg-config liblapack-dev
-  PASS CMAKE_BUILD_TYPE LIBXSENSMT_GIT_REVISION
-)
+install(EXPORT ${PROJECT_NAME}Targets DESTINATION lib/cmake/${PROJECT_NAME})
+install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+        DESTINATION lib/cmake/${PROJECT_NAME})
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/lib/ DESTINATION include PATTERN examples EXCLUDE)
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/lib/x86_64/ DESTINATION lib/${PROJECT_NAME})
+else()
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/lib/i386/ DESTINATION lib/${PROJECT_NAME})
+endif()
+
